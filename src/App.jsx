@@ -301,6 +301,10 @@ export default function App() {
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d={menuOpen ? 'M18 6 6 18M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} /></svg>
         </button>
         <div className="store-header-copy">
+          <div className="store-header-brand" aria-label="Minh Nhật Store">
+            <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3 19 7l-3 3-3-3 3-4Z" fill="currentColor" /><path d="M7 11l9 9 9-9M7 11v13c0 2-1 3-3 4V15c0-2 2-3 3-1l6 6c2 2 4 2 6 0l6-6c2-2 3-1 3 1v13c-2-1-3-2-3-4V11" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            <span>MINH NHẬT STORE</span>
+          </div>
           <p>Xin chào, {user} <span>✦</span></p>
           <h1>{activeTab[1]}</h1>
         </div>
