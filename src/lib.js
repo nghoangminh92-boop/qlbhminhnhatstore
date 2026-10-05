@@ -9,7 +9,9 @@ export const pname=p=>`${p.brand} ${p.model} ${p.storage}`;
 export function stats(S,m){
   const sl=S.sales.filter(x=>x.date.slice(0,7)===m),ex=S.exps.filter(x=>x.date.slice(0,7)===m);
   const manual=(S.manualRevenues||[]).filter(x=>x.date.slice(0,7)===m);
+  const repairs=(S.repairRevenues||[]).filter(x=>x.date.slice(0,7)===m);
   const salesRev=sl.reduce((a,x)=>a+x.price*x.qty,0),manualRev=manual.reduce((a,x)=>a+x.amt,0);
-  const rev=salesRev+manualRev,cogs=sl.reduce((a,x)=>a+x.cost*x.qty,0),exp=ex.reduce((a,x)=>a+x.amt,0);
-  return{sl,ex,manual,rev,salesRev,manualRev,cogs,exp,gross:rev-cogs,net:rev-cogs-exp,units:sl.reduce((a,x)=>a+x.qty,0)};
+  const repairRev=repairs.reduce((a,x)=>a+x.amt,0),repairMaterialCost=repairs.reduce((a,x)=>a+(x.materialCost||0),0);
+  const rev=salesRev+manualRev+repairRev,cogs=sl.reduce((a,x)=>a+x.cost*x.qty,0),exp=ex.reduce((a,x)=>a+x.amt,0);
+  return{sl,ex,manual,repairs,rev,salesRev,manualRev,repairRev,repairMaterialCost,cogs,exp,gross:rev-cogs-repairMaterialCost,net:rev-cogs-repairMaterialCost-exp,units:sl.reduce((a,x)=>a+x.qty,0)};
 }

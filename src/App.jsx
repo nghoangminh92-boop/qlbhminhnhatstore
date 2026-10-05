@@ -39,7 +39,8 @@ function staffCanUpdate(previous, next) {
   if (next.sales.length !== nextSales.size || next.phones.length !== nextPhones.size ||
       next.exps.length !== previous.exps.length ||
       !previous.exps.every((item, index) => sameRecord(item, next.exps[index])) ||
-      !sameRecord(previous.manualRevenues || [], next.manualRevenues || [])) return false;
+      !sameRecord(previous.manualRevenues || [], next.manualRevenues || []) ||
+      !sameRecord(previous.repairRevenues || [], next.repairRevenues || [])) return false;
 
   for (const [id, sale] of previousSales) {
     if (!sameRecord(sale, nextSales.get(id))) return false;
@@ -234,8 +235,8 @@ export default function App() {
   const enter = async (name, accountRole) => {
     const d = await api('/api/data');
     const nextRole = d.role || accountRole || 'staff';
-    const init = d.empty ? { phones: [], sales: [], exps: [], manualRevenues: [] } : {
-      phones: d.phones || [], sales: d.sales || [], exps: d.exps || [], manualRevenues: d.manualRevenues || []
+    const init = d.empty ? { phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [] } : {
+      phones: d.phones || [], sales: d.sales || [], exps: d.exps || [], manualRevenues: d.manualRevenues || [], repairRevenues: d.repairRevenues || []
     };
     ref.current = init; setData(init); setUser(name); setRole(nextRole); setPhase('app'); setHasUsers(true);
     setTab(nextRole === 'staff' ? 'sale' : 'dash');
@@ -252,7 +253,7 @@ export default function App() {
   }, []);
 
   const logout = async () => { try { await api('/api/logout', 'POST'); } catch {} ref.current = null; setData(null); setRole(''); setPhase('login'); };
-  const clear = () => { if (confirm('Xóa toàn bộ điện thoại, đơn bán, doanh thu nhập trực tiếp và chi tiêu?')) update(() => ({ phones: [], sales: [], exps: [], manualRevenues: [] })); };
+  const clear = () => { if (confirm('Xóa toàn bộ điện thoại, đơn bán, doanh thu và chi tiêu?')) update(() => ({ phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [] })); };
 
   if (phase === 'boot') return <div className="wrap"><div className="empty">Đang tải…</div></div>;
   if (phase === 'down') return <div className="wrap"><div className="card">Không kết nối được máy chủ. Hãy chắc chắn backend đang chạy (npm start) rồi tải lại trang.</div></div>;
