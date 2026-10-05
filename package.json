@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:backend": "vite build --outDir ../quan-ly-cua-hang/public --emptyOutDir",
+    "build": "node ./node_modules/vite/bin/vite.js build",
+    "build:backend": "node ./node_modules/vite/bin/vite.js build --outDir ../quan-ly-cua-hang/public --emptyOutDir",
     "preview": "vite preview"
   },
   "dependencies": { "react": "^18.3.1", "react-dom": "^18.3.1" },
