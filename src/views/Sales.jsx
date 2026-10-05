@@ -38,14 +38,14 @@ export default function Sales({ data, month, update }) {
         <div><label>Giá bán (₫)</label><input type="number" min="0" value={price} onChange={set('pr')} /></div>
         <div><label>Khách hàng</label><input placeholder="Khách lẻ" value={f.cust} onChange={set('cust')} /></div>
         <div><label>Thanh toán</label><select value={f.pay} onChange={set('pay')}>{PAYS.map(p => <option key={p}>{p}</option>)}</select></div>
-        <div><label>Ngày</label><input type="date" value={f.d} onChange={set('d')} /></div>
+        <div><label>Ngày</label><input lang="vi" type="date" value={f.d} onChange={set('d')} /></div>
         <button className="p" onClick={add}>Lưu đơn bán</button>
       </div> : <Empty>Kho đã hết hàng. Thêm máy ở tab Kho điện thoại.</Empty>}
     </div>
     <div className="card"><h2>Đơn bán tháng {ml(month)} ({s.sl.length} đơn)</h2>
       <div className="scroll">{s.sl.length ? <table><thead><tr><th>Ngày</th><th>Điện thoại</th><th className="n">SL</th><th className="n">Giá bán</th><th className="n">Lãi</th><th>Khách</th><th>Thanh toán</th><th /></tr></thead>
         <tbody>{[...s.sl].sort((a, b) => b.date.localeCompare(a.date)).map(x => <tr key={x.id}>
-          <td><input aria-label={`Ngày bán ${x.name}`} type="date" value={x.date} onChange={e => changeDate(x.id, e.target.value)} style={{ minWidth: 145, padding: '4px 6px' }} /></td>
+          <td><input lang="vi" aria-label={`Ngày bán ${x.name}`} type="date" value={x.date} onChange={e => changeDate(x.id, e.target.value)} style={{ minWidth: 145, padding: '4px 6px' }} /></td>
           <td>{x.name}</td><td className="n">{x.qty}</td><td className="n">{fmt(x.price * x.qty)}</td>
           <td className={'n ' + (x.price >= x.cost ? 'pos' : 'neg')}>{fmt((x.price - x.cost) * x.qty)}</td><td>{x.cust}</td><td>{x.pay}</td>
           <td><button className="x" onClick={() => del(x)}>Xóa</button></td></tr>)}</tbody></table> : <Empty>Chưa có đơn bán nào trong tháng này.</Empty>}</div>

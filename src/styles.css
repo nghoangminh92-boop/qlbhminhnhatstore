@@ -240,3 +240,28 @@ body{margin:0}
   .store-content .kpi b{font-size:18px}
   .store-content .kpi small{font-size:11px}
 }
+
+@media(max-width:720px){
+  .store-sidebar{overflow-y:auto;padding-top:max(18px,env(safe-area-inset-top));padding-bottom:max(17px,env(safe-area-inset-bottom))}
+  .store-header{position:sticky;top:0;display:grid;grid-template-columns:42px minmax(0,1fr);grid-template-areas:"menu title" "actions actions";align-items:center;gap:8px 10px;min-height:0;padding:10px 12px;background:#fffffff5}
+  .store-menu-toggle{grid-area:menu;width:42px;height:42px}
+  .store-header-copy{grid-area:title}
+  .store-header-actions{grid-area:actions;width:100%;justify-content:space-between;flex-wrap:wrap}
+  .store-month-picker{display:flex;align-items:center;gap:7px}
+  .store-save-status.has-error{display:block;flex:1 0 100%;max-width:none;white-space:normal;overflow-wrap:anywhere}
+  .store-content{min-width:0;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  .store-content .form{grid-template-columns:minmax(0,1fr)}
+  .store-content .form > *{min-width:0}
+  .store-content .scroll{max-width:100%;overscroll-behavior-x:contain}
+  .store-content :is(button,input,select){min-height:44px}
+  .store-content td input[type="date"]{min-height:40px}
+  .store-shell [role="dialog"]{max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto}
+}
+@media(max-width:390px){
+  .store-header{padding-right:10px;padding-left:10px}
+  .store-header-actions{gap:6px}
+  .store-month-picker{gap:5px;font-size:11px}
+  .store-shell .store-month-picker input{width:110px;min-height:44px;font-size:13px}
+  .store-shell .store-clear-button{min-height:44px;padding:7px}
+  .store-content .form{grid-template-columns:minmax(0,1fr)}
+}

@@ -36,7 +36,7 @@ export default function Inventory({ data, month, update }) {
         <div><label>Giá nhập (₫)</label><input type="number" min="0" value={f.cost} onChange={set('cost')} /></div>
         <div><label>Giá bán (₫)</label><input type="number" min="0" value={f.price} onChange={set('price')} /></div>
         <div><label>Tồn kho</label><input type="number" min="0" step="1" value={f.stock} onChange={set('stock')} /></div>
-        <div><label>Ngày nhập kho</label><input type="date" value={f.stockDate} onChange={set('stockDate')} /></div>
+        <div><label>Ngày nhập kho</label><input lang="vi" type="date" value={f.stockDate} onChange={set('stockDate')} /></div>
         <div className="sp"><button className="p" onClick={submit}>{editId ? 'Cập nhật' : 'Thêm máy'}</button>{editId && <button onClick={cancel}>Hủy</button>}</div>
       </div>
     </div>

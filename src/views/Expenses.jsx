@@ -20,7 +20,7 @@ export default function Expenses({ data, month, update }) {
         <div><label>Khoản chi</label><select value={f.c} onChange={set('c')}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
         <div><label>Số tiền (₫)</label><input type="number" min="0" value={f.a} onChange={set('a')} /></div>
         <div><label>Ghi chú</label><input value={f.n} onChange={set('n')} /></div>
-        <div><label>Ngày</label><input type="date" value={f.d} onChange={set('d')} /></div>
+        <div><label>Ngày</label><input lang="vi" type="date" value={f.d} onChange={set('d')} /></div>
         <button className="p" onClick={add}>Lưu khoản chi</button>
       </div>
     </div>

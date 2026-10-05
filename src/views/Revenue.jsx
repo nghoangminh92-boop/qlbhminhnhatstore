@@ -60,7 +60,7 @@ export default function Revenue({ data, month, update }) {
         Dùng cho doanh thu chưa ghi thành đơn bán. Khoản này được cộng vào tổng doanh thu nhưng chưa có giá vốn.
       </p>
       <div className="form">
-        <div><label>Ngày ghi nhận</label><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
+        <div><label>Ngày ghi nhận</label><input lang="vi" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
         <div><label>Số tiền (₫)</label><input type="number" min="1" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
         <div><label>Ghi chú</label><input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} /></div>
         <button className="p" onClick={add}>Lưu doanh thu</button>

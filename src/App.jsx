@@ -97,7 +97,6 @@ function Login({ hasUsers, onDone }) {
   };
   return <div className="login mn-login">
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap');
       .mn-login{--mn-red:#f01320;position:fixed;inset:0;z-index:100;display:block!important;padding:0!important;overflow:auto;background:#000;color:#fff}
       .mn-login,.mn-login *{box-sizing:border-box}
       .mn-hero{position:relative;isolation:isolate;display:grid;grid-template-rows:auto 1fr auto;width:100%;min-height:100vh;min-height:100svh;overflow:hidden;background:#000}
@@ -108,29 +107,29 @@ function Login({ hasUsers, onDone }) {
       .mn-nav{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:clamp(20px,3vw,38px) clamp(20px,5vw,84px)}
       .mn-logo{display:flex;flex-direction:column;align-items:center;gap:0;color:#fff;text-decoration:none}
       .mn-logo-symbol{width:56px;height:48px;flex:none;color:var(--mn-red)}
-      .mn-logo-words{font:400 clamp(13px,1.35vw,18px)/1 "Sora",sans-serif;letter-spacing:.12em}
-      .mn-logo-words small{display:block;margin-top:4px;color:var(--mn-red);font:400 10px/1 "JetBrains Mono",monospace;letter-spacing:.4em;text-align:center}
-      .mn-nav-note{color:rgba(255,255,255,.68);font:400 11px/1.5 "JetBrains Mono",monospace;letter-spacing:.16em;text-align:right}
+      .mn-logo-words{font:600 clamp(13px,1.35vw,18px)/1 "Be Vietnam Pro",sans-serif;letter-spacing:.12em}
+      .mn-logo-words small{display:block;margin-top:4px;color:var(--mn-red);font:500 10px/1 "Be Vietnam Pro",sans-serif;letter-spacing:.4em;text-align:center}
+      .mn-nav-note{color:rgba(255,255,255,.68);font:500 11px/1.5 "Be Vietnam Pro",sans-serif;letter-spacing:.16em;text-align:right}
       .mn-body{display:flex;align-items:center;justify-content:flex-end;min-height:0;overflow-y:auto;padding:24px clamp(20px,8vw,140px)}
       .mn-panel{width:min(35vw,480px);min-width:340px}
-      .mn-chip{display:inline-block;border-left:2px solid var(--mn-red);background:rgba(255,255,255,.08);padding:10px 15px;font:400 11px/1 "JetBrains Mono",monospace;letter-spacing:.18em}
-      .mn-title{margin:30px 0 0;font:300 clamp(42px,5vw,70px)/1.1 "Sora",sans-serif;letter-spacing:.015em}
-      .mn-tag{margin:12px 0 0;color:rgba(255,255,255,.66);font:300 12px/1.7 "JetBrains Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
+      .mn-chip{display:inline-block;border-left:2px solid var(--mn-red);background:rgba(255,255,255,.08);padding:10px 15px;font:500 11px/1 "Be Vietnam Pro",sans-serif;letter-spacing:.18em}
+      .mn-title{margin:30px 0 0;font:300 clamp(42px,5vw,70px)/1.1 "Be Vietnam Pro",sans-serif;letter-spacing:.015em}
+      .mn-tag{margin:12px 0 0;color:rgba(255,255,255,.66);font:300 12px/1.7 "Be Vietnam Pro",sans-serif;letter-spacing:.1em;text-transform:uppercase}
       .mn-form{display:grid;gap:20px;margin-top:38px}
       .mn-fields{display:grid;gap:18px}
-      .mn-field label{display:block;margin-bottom:7px;color:rgba(255,255,255,.68);font:400 11px/1.5 "JetBrains Mono",monospace;letter-spacing:.07em}
-      .mn-field input{width:100%;min-height:46px;padding:10px 12px;border:1px solid rgba(255,255,255,.25);border-radius:0;background:rgba(0,0,0,.18);color:#fff;font:300 15px/1.4 "Sora",sans-serif}
+      .mn-field label{display:block;margin-bottom:7px;color:rgba(255,255,255,.68);font:500 11px/1.5 "Be Vietnam Pro",sans-serif;letter-spacing:.07em}
+      .mn-field input{width:100%;min-height:46px;padding:10px 12px;border:1px solid rgba(255,255,255,.25);border-radius:0;background:rgba(0,0,0,.18);color:#fff;font:400 15px/1.4 "Be Vietnam Pro",sans-serif}
       .mn-field input::placeholder{color:rgba(255,255,255,.48)}
       .mn-field input:focus{border-color:rgba(255,255,255,.8);outline:1px solid rgba(255,255,255,.5);outline-offset:2px}
-      .mn-submit,.mn-forgot{width:100%;min-height:50px;border-radius:0;font:400 11px/1.4 "JetBrains Mono",monospace;letter-spacing:.17em;text-transform:uppercase;transition:background .2s ease,border-color .2s ease,color .2s ease}
+      .mn-submit,.mn-forgot{width:100%;min-height:50px;border-radius:0;font:500 11px/1.4 "Be Vietnam Pro",sans-serif;letter-spacing:.17em;text-transform:uppercase;transition:background .2s ease,border-color .2s ease,color .2s ease}
       .mn-submit{border:1px solid var(--mn-red);background:var(--mn-red);color:#fff}
       .mn-submit:hover{border-color:#ff3340;background:#ff3340}
       .mn-submit:disabled,.mn-forgot:disabled{opacity:.65;cursor:wait}
       .mn-forgot{min-height:auto;padding:5px;border:0;background:transparent;color:rgba(255,255,255,.76)}
       .mn-forgot:hover{color:#fff;text-decoration:underline;text-underline-offset:4px}
-      .mn-error,.mn-notice{margin:0;font:400 12px/1.6 "JetBrains Mono",monospace}
+      .mn-error,.mn-notice{margin:0;font:400 12px/1.6 "Be Vietnam Pro",sans-serif}
       .mn-error{color:#ff7b84}.mn-notice{color:#fff}
-      .mn-footer{padding:20px max(20px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.82);font:400 12px/1.5 "Sora",sans-serif;letter-spacing:.14em;text-align:center}
+      .mn-footer{padding:20px max(20px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.82);font:400 12px/1.5 "Be Vietnam Pro",sans-serif;letter-spacing:.14em;text-align:center}
       .mn-login :is(a,button,input):focus-visible{outline:1px solid rgba(255,255,255,.8);outline-offset:3px}
       @media(max-width:900px){.mn-body{justify-content:center;padding:28px clamp(20px,8vw,60px)}.mn-panel{width:min(100%,500px);min-width:0}.mn-scrim{background:linear-gradient(to bottom,rgba(0,0,0,.35),rgba(0,0,0,.18) 25%,rgba(0,0,0,.78) 100%)}}
       @media(max-width:520px){.mn-nav{padding-top:max(18px,env(safe-area-inset-top));padding-left:20px;padding-right:20px}.mn-logo-symbol{width:48px;height:42px}.mn-nav-note{max-width:130px;font-size:9px}.mn-body{align-items:center;padding:20px}.mn-title{font-size:clamp(40px,12vw,58px);margin-top:25px}.mn-form{margin-top:28px}.mn-footer{font-size:11px}}
@@ -306,7 +305,7 @@ export default function App() {
           <h1>{activeTab[1]}</h1>
         </div>
         <div className="store-header-actions">
-          <label className="store-month-picker" htmlFor="mon"><span>Tháng</span><input id="mon" type="month" value={month} onChange={e => e.target.value && setMonth(e.target.value)} /></label>
+          <label className="store-month-picker" htmlFor="mon"><span>Tháng</span><input id="mon" lang="vi" type="month" value={month} onChange={e => e.target.value && setMonth(e.target.value)} /></label>
           {canManage && <button className="store-clear-button" onClick={clear} title="Xóa toàn bộ dữ liệu để bắt đầu từ đầu">Xóa sạch</button>}
           <span id="st" className={`store-save-status${st.startsWith('Lưu lỗi') ? ' has-error' : ''}`} role="status">{st}</span>
           <span className="store-user-badge"><i>{String(user || 'U').slice(0, 1).toUpperCase()}</i><span>{user}<small>{ROLE_NAMES[role] || role}</small></span></span>
