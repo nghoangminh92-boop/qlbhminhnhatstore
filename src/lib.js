@@ -7,9 +7,15 @@ export const today=()=>{const d=new Date();return ymOf(d)+'-'+String(d.getDate()
 export const uid=()=>Math.random().toString(36).slice(2,9);
 export const pname=p=>`${p.brand} ${p.model} ${p.storage}`;
 export function stats(S,m){
-  const sl=S.sales.filter(x=>x.date.slice(0,7)===m),ex=S.exps.filter(x=>x.date.slice(0,7)===m);
+  const sl=S.sales.filter(x=>x.date.slice(0,7)===m),operatingExps=S.exps.filter(x=>x.date.slice(0,7)===m);
   const manual=(S.manualRevenues||[]).filter(x=>x.date.slice(0,7)===m);
   const repairs=(S.repairRevenues||[]).filter(x=>x.date.slice(0,7)===m);
+  const repairMaterialExpenses=repairs.filter(x=>(x.materialCost||0)>0).map(x=>({
+    id:`repair-material-${x.id}`,date:x.date,cat:'Bảo hành / Sửa chữa',
+    amt:x.materialCost,note:`Vật liệu sửa chữa${x.note ? `: ${x.note}` : ''}`,
+    sourceRepairId:x.id
+  }));
+  const ex=[...operatingExps,...repairMaterialExpenses];
   const saleById=new Map(S.sales.map(x=>[x.id,x]));
   const saleReturns=(S.saleReturns||[]).filter(x=>x.date.slice(0,7)===m);
   const returnRefund=saleReturns.reduce((a,x)=>a+x.refundAmt,0);
@@ -17,6 +23,7 @@ export function stats(S,m){
   const returnedCogs=saleReturns.reduce((a,x)=>a+(saleById.get(x.saleId)?.cost||0)*x.qty,0);
   const salesRev=sl.reduce((a,x)=>a+x.price*x.qty,0),manualRev=manual.reduce((a,x)=>a+x.amt,0);
   const repairRev=repairs.reduce((a,x)=>a+x.amt,0),repairMaterialCost=repairs.reduce((a,x)=>a+(x.materialCost||0),0);
-  const rev=salesRev-returnRefund+manualRev+repairRev,cogs=sl.reduce((a,x)=>a+x.cost*x.qty,0)-returnedCogs,exp=ex.reduce((a,x)=>a+x.amt,0);
-  return{sl,ex,manual,repairs,saleReturns,returnRefund,returnedUnits,rev,salesRev,manualRev,repairRev,repairMaterialCost,cogs,exp,gross:rev-cogs-repairMaterialCost,net:rev-cogs-repairMaterialCost-exp,units:sl.reduce((a,x)=>a+x.qty,0)};
+  const rev=salesRev-returnRefund+manualRev+repairRev,cogs=sl.reduce((a,x)=>a+x.cost*x.qty,0)-returnedCogs;
+  const operatingExp=operatingExps.reduce((a,x)=>a+x.amt,0),exp=operatingExp+repairMaterialCost;
+  return{sl,ex,manual,repairs,saleReturns,returnRefund,returnedUnits,rev,salesRev,manualRev,repairRev,repairMaterialCost,cogs,operatingExp,exp,gross:rev-cogs,net:rev-cogs-exp,units:sl.reduce((a,x)=>a+x.qty,0)};
 }

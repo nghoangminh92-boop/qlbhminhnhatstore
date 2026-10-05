@@ -44,9 +44,10 @@ export default function Reports({ data, month }) {
     const date = `${month}-${String(index + 1).padStart(2, '0')}`;
     const day = dailyMap.get(date) || { salesRev: 0, returnRefund: 0, returnedUnits: 0, manualRev: 0, repairRev: 0, cogs: 0, repairMaterialCost: 0, exp: 0, units: 0 };
     const revenue = day.salesRev - day.returnRefund + day.manualRev + day.repairRev;
-    return { date, ...day, revenue, gross: revenue - day.cogs - day.repairMaterialCost, net: revenue - day.cogs - day.repairMaterialCost - day.exp };
+    const gross = revenue - day.cogs;
+    return { date, ...day, revenue, gross, operatingExp: day.exp - day.repairMaterialCost, net: gross - day.exp };
   });
-  const csv = 'Tháng,Doanh thu đơn bán,Hoàn đổi trả,Số máy trả,Doanh thu nhập trực tiếp,Doanh thu sửa chữa,Vật liệu sửa chữa,Tổng doanh thu,Giá vốn,Chi phí,Lợi nhuận tạm tính,Số máy bán\n' + rows.map(r => [r[0], r[1].salesRev, r[1].returnRefund, r[1].returnedUnits, r[1].manualRev, r[1].repairRev, r[1].repairMaterialCost, r[1].rev, r[1].cogs, r[1].exp, r[1].net, r[1].units].join(',')).join('\n');
+  const csv = 'Tháng,Doanh thu đơn bán,Hoàn đổi trả,Số máy trả,Doanh thu nhập trực tiếp,Doanh thu sửa chữa,Vật liệu sửa chữa,Tổng doanh thu,Giá vốn,Chi phí khác,Lợi nhuận tạm tính,Số máy bán\n' + rows.map(r => [r[0], r[1].salesRev, r[1].returnRefund, r[1].returnedUnits, r[1].manualRev, r[1].repairRev, r[1].repairMaterialCost, r[1].rev, r[1].cogs, r[1].operatingExp, r[1].net, r[1].units].join(',')).join('\n');
   const tot = rows.reduce((a, r) => a + r[1].net, 0);
   const cls = n => 'n ' + (n >= 0 ? 'pos' : 'neg');
   const exportMonth = () => {
@@ -105,11 +106,11 @@ export default function Reports({ data, month }) {
         ['Tiền hoàn đổi trả', s.returnRefund],
         ['Doanh thu nhập trực tiếp (chưa có giá vốn)', s.manualRev],
         ['Doanh thu sửa chữa', s.repairRev],
-        ['Chi phí vật liệu sửa chữa', s.repairMaterialCost],
+        ['Trừ chi phí vật liệu sửa chữa (cũng hiện ở Chi tiêu)', s.repairMaterialCost],
         ['Tổng doanh thu', s.rev],
         ['Giá vốn từ đơn bán', s.cogs],
-        ['Lợi nhuận gộp sau giá vốn và vật liệu sửa chữa (tạm tính)', s.gross],
-        ['Chi tiêu', s.exp],
+        ['Lợi nhuận gộp sau giá vốn (tạm tính)', s.gross],
+        ['Chi phí khác', s.operatingExp],
         ['Lợi nhuận ròng (tạm tính nếu có doanh thu nhập trực tiếp)', s.net],
         ['Số máy bán', s.units]
       ] },
@@ -141,9 +142,9 @@ export default function Reports({ data, month }) {
         ...expenses.map(item => [item.date, item.cat, item.amt, item.note || ''])
       ] },
       { name: 'Bao cao ngay', rows: [
-        ['Ngày', 'Doanh thu đơn bán', 'Hoàn đổi trả', 'Số máy trả', 'Doanh thu nhập trực tiếp', 'Doanh thu sửa chữa', 'Vật liệu sửa chữa', 'Tổng doanh thu', 'Giá vốn', 'Chi tiêu', 'Lợi nhuận tạm tính', 'Số máy bán'],
-        ...dailyRows.map(day => [day.date, day.salesRev, day.returnRefund, day.returnedUnits, day.manualRev, day.repairRev, day.repairMaterialCost, day.revenue, day.cogs, day.exp, day.net, day.units]),
-        ['Tổng tháng', s.salesRev, s.returnRefund, s.returnedUnits, s.manualRev, s.repairRev, s.repairMaterialCost, s.rev, s.cogs, s.exp, s.net, s.units]
+        ['Ngày', 'Doanh thu đơn bán', 'Hoàn đổi trả', 'Số máy trả', 'Doanh thu nhập trực tiếp', 'Doanh thu sửa chữa', 'Vật liệu sửa chữa', 'Tổng doanh thu', 'Giá vốn', 'Chi phí khác', 'Lợi nhuận tạm tính', 'Số máy bán'],
+        ...dailyRows.map(day => [day.date, day.salesRev, day.returnRefund, day.returnedUnits, day.manualRev, day.repairRev, day.repairMaterialCost, day.revenue, day.cogs, day.operatingExp, day.net, day.units]),
+        ['Tổng tháng', s.salesRev, s.returnRefund, s.returnedUnits, s.manualRev, s.repairRev, s.repairMaterialCost, s.rev, s.cogs, s.operatingExp, s.net, s.units]
       ] }
     ];
     const { blob, fileName } = createMonthlyExcel(month, sheets);
@@ -168,13 +169,13 @@ export default function Reports({ data, month }) {
         <tr><td>Doanh thu sửa chữa</td><td className="n">{fmt(s.repairRev)}</td></tr>
         <tr><td><b>Tổng doanh thu</b></td><td className="n"><b>{fmt(s.rev)}</b></td></tr>
         <tr><td>Trừ giá vốn hàng bán</td><td className="n">{fmt(s.cogs)}</td></tr>
-        <tr><td>Trừ chi phí vật liệu sửa chữa</td><td className="n">{fmt(s.repairMaterialCost)}</td></tr>
-        <tr><td><b>Lợi nhuận gộp</b></td><td className="n"><b>{fmt(s.gross)}</b></td></tr>
-        <tr><td>Trừ chi phí vận hành</td><td className="n">{fmt(s.exp)}</td></tr>
+        <tr><td><b>Lợi nhuận gộp sau giá vốn</b></td><td className="n"><b>{fmt(s.gross)}</b></td></tr>
+        <tr><td>Trừ chi phí vật liệu sửa chữa (cũng hiện ở Chi tiêu)</td><td className="n">{fmt(s.repairMaterialCost)}</td></tr>
+        <tr><td>Trừ chi phí khác</td><td className="n">{fmt(s.operatingExp)}</td></tr>
         <tr><td><b>Lợi nhuận tạm tính</b></td><td className={cls(s.net)}><b>{fmt(s.net)}</b></td></tr>
       </tbody></table></div>
       <p style={{ color: 'var(--mute)', fontSize: 13, margin: '10px 0 0' }}>
-        Đơn bán được ghi nhận vào tháng bán; tiền hoàn và số máy trả được ghi nhận vào tháng đổi trả. Giá vốn hàng trả được hoàn lại trong tháng đổi trả. Chi phí vật liệu sửa chữa được ghi riêng. Doanh thu nhập trực tiếp chưa có giá vốn tương ứng nên lợi nhuận là tạm tính.
+        Đơn bán được ghi nhận vào tháng bán; tiền hoàn và số máy trả được ghi nhận vào tháng đổi trả. Giá vốn hàng trả được hoàn lại trong tháng đổi trả. Vật liệu sửa chữa được tính một lần trong tổng chi phí và hiển thị riêng để đối chiếu. Doanh thu nhập trực tiếp chưa có giá vốn tương ứng nên lợi nhuận là tạm tính.
       </p>
     </div>
     <div className="card"><h2>Báo cáo từng ngày — tháng {ml(month)}</h2>
@@ -183,22 +184,22 @@ export default function Reports({ data, month }) {
       </p>
       <div className="scroll"><table><thead><tr>
         <th>Ngày</th><th className="n">Đơn bán</th><th className="n">Hoàn đổi trả</th><th className="n">Máy trả</th><th className="n">Nhập trực tiếp</th><th className="n">Sửa chữa</th><th className="n">Vật liệu sửa chữa</th><th className="n">Tổng doanh thu</th>
-        <th className="n">Giá vốn</th><th className="n">Chi tiêu</th><th className="n">Lợi nhuận tạm tính</th><th className="n">Số máy</th>
+        <th className="n">Giá vốn</th><th className="n">Chi phí khác</th><th className="n">Lợi nhuận tạm tính</th><th className="n">Số máy</th>
       </tr></thead><tbody>
         {dailyRows.map(day => <tr key={day.date}>
           <td>{day.date.slice(8)}/{day.date.slice(5, 7)}</td>
           <td className="n">{fmt(day.salesRev)}</td><td className="n">{fmt(day.returnRefund)}</td><td className="n">{day.returnedUnits}</td><td className="n">{fmt(day.manualRev)}</td><td className="n">{fmt(day.repairRev)}</td><td className="n">{fmt(day.repairMaterialCost)}</td>
           <td className="n">{fmt(day.revenue)}</td><td className="n">{fmt(day.cogs)}</td>
-          <td className="n">{fmt(day.exp)}</td><td className={cls(day.net)}>{fmt(day.net)}</td><td className="n">{day.units}</td>
+          <td className="n">{fmt(day.operatingExp)}</td><td className={cls(day.net)}>{fmt(day.net)}</td><td className="n">{day.units}</td>
         </tr>)}
         <tr><td><b>Tổng tháng</b></td><td className="n"><b>{fmt(s.salesRev)}</b></td><td className="n"><b>{fmt(s.returnRefund)}</b></td><td className="n"><b>{s.returnedUnits}</b></td><td className="n"><b>{fmt(s.manualRev)}</b></td><td className="n"><b>{fmt(s.repairRev)}</b></td><td className="n"><b>{fmt(s.repairMaterialCost)}</b></td>
-          <td className="n"><b>{fmt(s.rev)}</b></td><td className="n"><b>{fmt(s.cogs)}</b></td><td className="n"><b>{fmt(s.exp)}</b></td>
+          <td className="n"><b>{fmt(s.rev)}</b></td><td className="n"><b>{fmt(s.cogs)}</b></td><td className="n"><b>{fmt(s.operatingExp)}</b></td>
           <td className={cls(s.net)}><b>{fmt(s.net)}</b></td><td className="n"><b>{s.units}</b></td></tr>
       </tbody></table></div>
     </div>
     <div className="card"><h2>12 tháng gần nhất (lãi tạm tính cộng dồn {sh(tot)})</h2>
-      <div className="scroll"><table><thead><tr><th>Tháng</th><th className="n">Đơn bán</th><th className="n">Hoàn đổi trả</th><th className="n">Máy trả</th><th className="n">Nhập trực tiếp</th><th className="n">Sửa chữa</th><th className="n">Vật liệu sửa chữa</th><th className="n">Tổng doanh thu</th><th className="n">Giá vốn</th><th className="n">Chi phí</th><th className="n">Lãi tạm tính</th><th className="n">Số máy bán</th></tr></thead>
-        <tbody>{rows.map(([k, r]) => <tr key={k}><td>{ml(k)}</td><td className="n">{fmt(r.salesRev)}</td><td className="n">{fmt(r.returnRefund)}</td><td className="n">{r.returnedUnits}</td><td className="n">{fmt(r.manualRev)}</td><td className="n">{fmt(r.repairRev)}</td><td className="n">{fmt(r.repairMaterialCost)}</td><td className="n">{fmt(r.rev)}</td><td className="n">{fmt(r.cogs)}</td><td className="n">{fmt(r.exp)}</td><td className={cls(r.net)}>{fmt(r.net)}</td><td className="n">{r.units}</td></tr>)}</tbody></table></div>
+      <div className="scroll"><table><thead><tr><th>Tháng</th><th className="n">Đơn bán</th><th className="n">Hoàn đổi trả</th><th className="n">Máy trả</th><th className="n">Nhập trực tiếp</th><th className="n">Sửa chữa</th><th className="n">Vật liệu sửa chữa</th><th className="n">Tổng doanh thu</th><th className="n">Giá vốn</th><th className="n">Chi phí khác</th><th className="n">Lãi tạm tính</th><th className="n">Số máy bán</th></tr></thead>
+        <tbody>{rows.map(([k, r]) => <tr key={k}><td>{ml(k)}</td><td className="n">{fmt(r.salesRev)}</td><td className="n">{fmt(r.returnRefund)}</td><td className="n">{r.returnedUnits}</td><td className="n">{fmt(r.manualRev)}</td><td className="n">{fmt(r.repairRev)}</td><td className="n">{fmt(r.repairMaterialCost)}</td><td className="n">{fmt(r.rev)}</td><td className="n">{fmt(r.cogs)}</td><td className="n">{fmt(r.operatingExp)}</td><td className={cls(r.net)}>{fmt(r.net)}</td><td className="n">{r.units}</td></tr>)}</tbody></table></div>
       <div style={{ marginTop: 12 }}><button onClick={() => setShow(!show)}>{show ? 'Ẩn CSV' : 'Xem dạng CSV để sao chép'}</button>
         {show && <div style={{ marginTop: 8 }}><textarea readOnly value={csv} onClick={e => e.target.select()} /></div>}</div>
     </div>
