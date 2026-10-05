@@ -29,6 +29,15 @@ function sameRecord(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function sameRepairRevenues(left = [], right = []) {
+  const normalize = rows => rows
+    .map(({ id, date, amt, materialCost, note }) => ({
+      id, date, amt: Number(amt), materialCost: Number(materialCost || 0), note: note || ''
+    }))
+    .sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+  return sameRecord(normalize(left), normalize(right));
+}
+
 function staffCanUpdate(previous, next) {
   const previousSales = new Map(previous.sales.map(item => [item.id, item]));
   const nextSales = new Map(next.sales.map(item => [item.id, item]));
@@ -269,21 +278,45 @@ export default function App() {
   const [st, setSt] = useState('');
   const [passwordOpen, setPasswordOpen] = useState(false);
   const ref = useRef(null), timer = useRef(null);
+  const saveWaiters = useRef([]), verifyRepairsOnSave = useRef(false);
 
-  const persist = d => {
+  const persist = (d, verifyRepairs = false) => new Promise(resolve => {
     setSt('Đang lưu…'); clearTimeout(timer.current);
+    saveWaiters.current.push(resolve);
+    verifyRepairsOnSave.current = verifyRepairsOnSave.current || verifyRepairs;
     timer.current = setTimeout(async () => {
-      try { await api('/api/data', 'PUT', d); setSt('Đã lưu'); }
-      catch (e) { if (e.status === 401) setPhase('login'); else setSt('Lưu lỗi: ' + e.message); }
+      const waiters = saveWaiters.current.splice(0);
+      const shouldVerifyRepairs = verifyRepairsOnSave.current;
+      verifyRepairsOnSave.current = false;
+      try {
+        await api('/api/data', 'PUT', d);
+        if (shouldVerifyRepairs) {
+          const saved = await api('/api/data');
+          if (!sameRepairRevenues(d.repairRevenues || [], saved.repairRevenues || [])) {
+            throw new Error('Máy chủ chưa lưu doanh thu sửa chữa. Cần cập nhật API /api/data của backend.');
+          }
+        }
+        setSt('Đã lưu');
+        waiters.forEach(done => done(true));
+      } catch (e) {
+        if (e.status === 401) setPhase('login');
+        setSt('Lưu lỗi: ' + e.message);
+        waiters.forEach(done => done(false));
+      }
     }, 400);
-  };
+  });
   const update = fn => {
     const n = fn(ref.current);
     if (role === 'staff' && !staffCanUpdate(ref.current, n)) {
       setSt('Nhân viên chỉ được thêm điện thoại, đơn bán mới hoặc ghi nhận đổi trả hợp lệ.');
-      return;
+      return Promise.resolve(false);
     }
-    ref.current = n; setData(n); persist(n);
+    const repairRevenuesChanged = !sameRepairRevenues(
+      ref.current.repairRevenues || [],
+      n.repairRevenues || []
+    );
+    ref.current = n; setData(n);
+    return persist(n, repairRevenuesChanged);
   };
 
   const enter = async (name, accountRole) => {

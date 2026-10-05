@@ -27,9 +27,21 @@ export default function Expenses({ data, month, update }) {
     <DataImport data={data} update={update} initialType="expense" />
     <div className="card"><h2>Chi tiêu tháng {ml(month)}: {fmt(s.exp)}</h2>
       <div className="scroll">{s.ex.length ? <table><thead><tr><th>Ngày</th><th>Khoản chi</th><th>Ghi chú</th><th className="n">Số tiền</th><th /></tr></thead>
-        <tbody>{[...s.ex].sort((a, b) => b.date.localeCompare(a.date)).map(x => <tr key={x.id}>
-          <td>{dm(x.date)}</td><td>{x.cat}</td><td>{x.note}{x.sourceRepairId && <small style={{ display: 'block', color: 'var(--mute)' }}>Tự động từ doanh thu sửa chữa</small>}</td>
-          <td className="n">{fmt(x.amt)}</td><td>{x.sourceRepairId ? <span style={{ color: 'var(--mute)' }}>Liên kết</span> : <button className="x" onClick={() => del(x.id)}>Xóa</button>}</td></tr>)}</tbody></table> : <Empty>Chưa có khoản chi nào trong tháng này.</Empty>}</div>
+        <tbody>{[...s.ex].sort((a, b) => b.date.localeCompare(a.date)).map(x => {
+          const linkedRevenue = x.id.startsWith('dr-');
+          return <tr key={x.id}>
+            <td>{dm(x.date)}</td><td>{x.cat}</td><td>{x.note}
+              {(x.sourceRepairId || linkedRevenue) && <small style={{ display: 'block', color: 'var(--mute)' }}>
+                {x.sourceRepairId ? 'Tự động từ doanh thu sửa chữa' : 'Gắn với doanh thu nhập trực tiếp'}
+              </small>}
+            </td>
+            <td className="n">{fmt(x.amt)}</td>
+            <td>{x.sourceRepairId || linkedRevenue
+              ? <span style={{ color: 'var(--mute)' }}>Liên kết</span>
+              : <button className="x" onClick={() => del(x.id)}>Xóa</button>}
+            </td>
+          </tr>;
+        })}</tbody></table> : <Empty>Chưa có khoản chi nào trong tháng này.</Empty>}</div>
     </div>
   </>;
 }
