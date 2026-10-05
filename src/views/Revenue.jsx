@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { CATS, fmt, sh, today, uid, ymOf, stats } from '../lib';
+import { fmt, sh, today, uid, ymOf, stats } from '../lib';
 import { dm, ml, Empty } from './shared';
 import DataImport from './DataImport';
 
 export default function Revenue({ data, month, update }) {
-  const [form, setForm] = useState({ date: month === ymOf(new Date()) ? today() : `${month}-01`, amount: '', expense: '', expenseCategory: 'Khác', note: '' });
-  const [editingRevenueId, setEditingRevenueId] = useState(null);
+  const [repairForm, setRepairForm] = useState({ date: month === ymOf(new Date()) ? today() : `${month}-01`, amount: '', materialCost: '', note: '' });
+  const [editingRepairId, setEditingRepairId] = useState(null);
   const current = stats(data, month);
   const [year, monthNumber] = month.split('-').map(Number);
   const monthly = [];
   useEffect(() => {
-    setForm(value => value.date.slice(0, 7) === month
+    setRepairForm(value => value.date.slice(0, 7) === month
       ? value
       : { ...value, date: month === ymOf(new Date()) ? today() : `${month}-01` });
   }, [month]);
@@ -44,64 +44,57 @@ export default function Revenue({ data, month, update }) {
   });
   const days = [...daily.values()].sort((a, b) => b.date.localeCompare(a.date));
 
-  const add = async () => {
-    const amount = Number(form.amount), expense = Number(form.expense || 0);
-    if (!form.date || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(expense) || expense < 0) {
-      return alert('Chọn ngày, nhập doanh thu lớn hơn 0 và chi phí không âm.');
+  const addRepair = async () => {
+    const amount = Number(repairForm.amount), materialCost = Number(repairForm.materialCost || 0);
+    if (!repairForm.date || !Number.isFinite(amount) || amount <= 0 ||
+        !Number.isFinite(materialCost) || materialCost < 0) {
+      return alert('Chọn ngày, nhập doanh thu lớn hơn 0 và chi phí vật liệu không âm.');
     }
     const saved = await update(state => {
-      const manualRevenues = state.manualRevenues || [];
-      const id = editingRevenueId || uid();
-      const linkedExpenseId = `dr-${id}`;
-      const existingExpenses = (state.exps || []).filter(item => item.id !== linkedExpenseId);
-      const updatedRevenue = {
-        id, date: form.date, amt: amount, note: form.note.trim()
+      const repairRevenues = state.repairRevenues || [];
+      const updated = {
+        id: editingRepairId || uid(),
+        date: repairForm.date,
+        amt: amount,
+        materialCost,
+        note: repairForm.note.trim()
       };
-      const linkedExpense = expense > 0 ? {
-        id: linkedExpenseId,
-        date: form.date,
-        cat: form.expenseCategory,
-        amt: expense,
-        note: `Chi phí doanh thu nhập trực tiếp${form.note.trim() ? `: ${form.note.trim()}` : ''}`
-      } : null;
       return {
         ...state,
-        manualRevenues: editingRevenueId
-          ? manualRevenues.map(entry => entry.id === editingRevenueId
-            ? updatedRevenue
-            : entry)
-          : [...manualRevenues, updatedRevenue],
-        exps: linkedExpense ? [...existingExpenses, linkedExpense] : existingExpenses
+        repairRevenues: editingRepairId
+          ? repairRevenues.map(entry => entry.id === editingRepairId ? updated : entry)
+          : [...repairRevenues, updated]
       };
     });
     if (!saved) return;
-    setEditingRevenueId(null);
-    setForm({ date: form.date, amount: '', expense: '', expenseCategory: 'Khác', note: '' });
+    setEditingRepairId(null);
+    setRepairForm({ date: repairForm.date, amount: '', materialCost: '', note: '' });
   };
-  const remove = id => update(state => ({
-    ...state,
-    manualRevenues: (state.manualRevenues || []).filter(entry => entry.id !== id),
-    exps: (state.exps || []).filter(entry => entry.id !== `dr-${id}`)
-  }));
-  const editRevenue = entry => {
-    setEditingRevenueId(entry.id);
-    const linkedExpense = (data.exps || []).find(item => item.id === `dr-${entry.id}`);
-    setForm({
+  const editRepair = entry => {
+    setEditingRepairId(entry.id);
+    setRepairForm({
       date: entry.date,
       amount: String(entry.amt),
-      expense: linkedExpense ? String(linkedExpense.amt) : String(entry.expense || ''),
-      expenseCategory: linkedExpense?.cat || entry.expenseCategory || 'Khác',
+      materialCost: String(entry.materialCost || 0),
       note: entry.note || ''
     });
   };
-  const cancelRevenueEdit = () => {
-    setEditingRevenueId(null);
-    setForm({ date: month === ymOf(new Date()) ? today() : `${month}-01`, amount: '', expense: '', expenseCategory: 'Khác', note: '' });
+  const cancelRepairEdit = () => {
+    setEditingRepairId(null);
+    setRepairForm({
+      date: month === ymOf(new Date()) ? today() : `${month}-01`,
+      amount: '',
+      materialCost: '',
+      note: ''
+    });
   };
-  const removeRepair = id => update(state => ({
-    ...state,
-    repairRevenues: (state.repairRevenues || []).filter(entry => entry.id !== id)
-  }));
+  const removeRepair = id => {
+    if (editingRepairId === id) cancelRepairEdit();
+    return update(state => ({
+      ...state,
+      repairRevenues: (state.repairRevenues || []).filter(entry => entry.id !== id)
+    }));
+  };
 
   return <>
     <div className="kpis">
@@ -113,16 +106,15 @@ export default function Revenue({ data, month, update }) {
     <div className="card">
       <h2>Ghi doanh thu sửa chữa</h2>
       <p style={{ color: 'var(--mute)', fontSize: 13, margin: '0 0 10px' }}>
-        Dùng cho doanh thu chưa ghi thành đơn bán. Khoản này được cộng vào tổng doanh thu nhưng chưa có giá vốn.
+        Ghi doanh thu và chi phí vật liệu; chi phí vật liệu sẽ được tính vào mục Chi tiêu.
       </p>
       <div className="form">
-        <div><label>Ngày ghi nhận</label><input lang="vi" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
-        <div><label>Số tiền (₫)</label><input type="number" min="1" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
-        <div><label>Chi phí kèm theo (₫)</label><input type="number" min="0" value={form.expense} onChange={e => setForm({ ...form, expense: e.target.value })} /></div>
-        <div><label>Khoản mục chi phí</label><select value={form.expenseCategory} onChange={e => setForm({ ...form, expenseCategory: e.target.value })}>{CATS.map(category => <option key={category}>{category}</option>)}</select></div>
-        <div><label>Ghi chú</label><input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} /></div>
-        <button className="p" onClick={add}>{editingRevenueId ? 'Cập nhật doanh thu' : 'Lưu doanh thu'}</button>
-        {editingRevenueId && <button onClick={cancelRevenueEdit}>Hủy sửa</button>}
+        <div><label>Ngày ghi nhận</label><input lang="vi" type="date" value={repairForm.date} onChange={e => setRepairForm({ ...repairForm, date: e.target.value })} /></div>
+        <div><label>Doanh thu (₫)</label><input type="number" min="1" value={repairForm.amount} onChange={e => setRepairForm({ ...repairForm, amount: e.target.value })} /></div>
+        <div><label>Chi phí vật liệu (₫)</label><input type="number" min="0" value={repairForm.materialCost} onChange={e => setRepairForm({ ...repairForm, materialCost: e.target.value })} /></div>
+        <div><label>Ghi chú</label><input value={repairForm.note} onChange={e => setRepairForm({ ...repairForm, note: e.target.value })} /></div>
+        <button className="p" onClick={addRepair}>{editingRepairId ? 'Cập nhật doanh thu sửa chữa' : 'Lưu doanh thu sửa chữa'}</button>
+        {editingRepairId && <button onClick={cancelRepairEdit}>Hủy sửa</button>}
       </div>
     </div>
     <DataImport data={data} update={update} initialType="revenue" />
@@ -145,23 +137,12 @@ export default function Revenue({ data, month, update }) {
       <h2>Doanh thu sửa chữa tháng {ml(month)}</h2>
       <div className="scroll">{current.repairs.length ? <table><thead><tr><th>Ngày</th><th>Ghi chú</th><th className="n">Doanh thu</th><th className="n">Vật liệu</th><th className="n">Lãi sau vật liệu</th><th /></tr></thead>
         <tbody>{[...current.repairs].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <tr key={entry.id}>
-          <td>{dm(entry.date)}</td><td>{entry.note || '—'}</td><td className="n">{fmt(entry.amt)}</td><td className="n">{fmt(entry.materialCost || 0)}</td>
-          <td className="n">{fmt(entry.amt - (entry.materialCost || 0))}</td><td><button className="x" onClick={() => removeRepair(entry.id)}>Xóa</button></td>
-        </tr>)}</tbody></table> : <Empty>Chưa có doanh thu sửa chữa trong tháng này.</Empty>}</div>
-    </div>
-    <div className="card">
-      <h2>Khoản doanh thu nhập trực tiếp tháng {ml(month)}</h2>
-      <div className="scroll">{current.manual.length ? <table><thead><tr><th>Ngày</th><th>Ghi chú</th><th className="n">Số tiền</th><th className="n">Chi phí kèm theo</th><th /></tr></thead>
-        <tbody>{[...current.manual].sort((a, b) => b.date.localeCompare(a.date)).map(entry => <tr key={entry.id}>
           <td>{dm(entry.date)}</td><td>{entry.note || '—'}</td><td className="n">{fmt(entry.amt)}</td>
-          <td className="n">{fmt((data.exps || []).find(item => item.id === `dr-${entry.id}`)?.amt || entry.expense || 0)}</td><td>
-            <button onClick={() => editRevenue(entry)}>Sửa</button>{' '}
-            <button className="x" onClick={() => {
-              if (editingRevenueId === entry.id) cancelRevenueEdit();
-              remove(entry.id);
-            }}>Xóa</button>
-          </td>
-        </tr>)}</tbody></table> : <Empty>Chưa có khoản doanh thu nhập trực tiếp trong tháng này.</Empty>}</div>
+          <td className="n">{fmt(entry.materialCost || 0)}</td>
+          <td className="n">{fmt(entry.amt - (entry.materialCost || 0))}</td>
+          <td><button onClick={() => editRepair(entry)}>Sửa</button>{' '}
+            <button className="x" onClick={() => removeRepair(entry.id)}>Xóa</button></td>
+        </tr>)}</tbody></table> : <Empty>Chưa có doanh thu sửa chữa trong tháng này.</Empty>}</div>
     </div>
   </>;
 }
