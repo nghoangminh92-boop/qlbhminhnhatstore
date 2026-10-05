@@ -19,6 +19,16 @@ Lệnh này build giao diện và chép thẳng vào `quan-ly-cua-hang/public`. 
 
 Nếu muốn đặt frontend ở tên miền khác với backend, backend cần thêm CORS và cookie `SameSite=None; Secure`. Phần này chưa có sẵn.
 
+## Triển khai frontend lên Vercel
+Vercel chỉ chạy giao diện React/Vite; backend và MongoDB vẫn cần được triển khai riêng trên một máy chủ có HTTPS.
+
+1. Import repository frontend vào Vercel. Vercel dùng `vercel.json` để chạy `npm run build` và phát hành thư mục `dist`.
+2. Trong **Project Settings → Environment Variables**, tạo `VITE_API_URL` với địa chỉ gốc HTTPS của backend, ví dụ `https://api.example.com` (không thêm `/api` ở cuối), rồi triển khai lại.
+3. Cấu hình backend cho phép CORS từ chính xác domain Vercel của ứng dụng, bật credentials, và đặt cookie đăng nhập `SameSite=None; Secure`. Không dùng `*` cho origin khi gửi credentials.
+4. Kiểm tra `/api/status`, đăng nhập, tải dữ liệu và lưu một thay đổi trên domain Vercel.
+
+Nếu chưa đặt `VITE_API_URL`, ứng dụng gọi `/api` trên chính domain Vercel; đăng nhập và dữ liệu sẽ không hoạt động nếu chưa có backend tại domain đó. Không đưa thông tin kết nối MongoDB hoặc bí mật máy chủ vào biến `VITE_*`, vì các biến này được đóng gói vào frontend.
+
 ## Cấu trúc
 - `src/api.js`: hàm gọi API.
 - `src/lib.js`: định dạng tiền và tính toán doanh thu/chi phí. Tài khoản mới bắt đầu với dữ liệu trống.

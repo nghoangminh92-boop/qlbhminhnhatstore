@@ -1,8 +1,10 @@
-// Gọi API backend. Cookie đăng nhập (httpOnly) được trình duyệt tự gửi kèm.
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
+// Set VITE_API_URL when the frontend and API are hosted on different domains.
 export async function api(url, method = 'GET', body) {
-  const r = await fetch(url, {
+  const r = await fetch(`${API_BASE}${url}`, {
     method,
-    credentials: 'same-origin',
+    credentials: API_BASE ? 'include' : 'same-origin',
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
   });
