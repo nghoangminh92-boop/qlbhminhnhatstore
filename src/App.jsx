@@ -35,15 +35,34 @@ function staffCanUpdate(previous, next) {
   const previousPhones = new Map(previous.phones.map(item => [item.id, item]));
   const nextPhones = new Map(next.phones.map(item => [item.id, item]));
   const soldQuantities = new Map();
+  const deletedQuantities = new Map();
+  const returnedQuantities = new Map();
+  const previousReturns = new Map((previous.saleReturns || []).map(item => [item.id, item]));
+  const nextReturns = new Map((next.saleReturns || []).map(item => [item.id, item]));
+  const previousReturnTotals = new Map();
+  const nextReturnTotals = new Map();
+  const nextRefundTotals = new Map();
 
   if (next.sales.length !== nextSales.size || next.phones.length !== nextPhones.size ||
+      (next.saleReturns || []).length !== nextReturns.size ||
       next.exps.length !== previous.exps.length ||
       !previous.exps.every((item, index) => sameRecord(item, next.exps[index])) ||
       !sameRecord(previous.manualRevenues || [], next.manualRevenues || []) ||
       !sameRecord(previous.repairRevenues || [], next.repairRevenues || [])) return false;
 
+  const returnedFromExistingSales = new Set((previous.saleReturns || []).map(item => item.saleId));
   for (const [id, sale] of previousSales) {
-    if (!sameRecord(sale, nextSales.get(id))) return false;
+    const updated = nextSales.get(id);
+    if (!updated) {
+      if (returnedFromExistingSales.has(id)) return false;
+      deletedQuantities.set(sale.phoneId, (deletedQuantities.get(sale.phoneId) || 0) + sale.qty);
+      continue;
+    }
+    const { returnedQty: previousReturnedQty = 0, returnRefund: previousRefund = 0, ...previousSale } = sale;
+    const { returnedQty: updatedReturnedQty = 0, returnRefund: updatedRefund = 0, ...updatedSale } = updated;
+    if (!sameRecord(previousSale, updatedSale) ||
+        !Number.isFinite(Number(previousReturnedQty)) || !Number.isFinite(Number(previousRefund)) ||
+        !Number.isFinite(Number(updatedReturnedQty)) || !Number.isFinite(Number(updatedRefund))) return false;
   }
   for (const sale of next.sales) {
     if (previousSales.has(sale.id)) continue;
@@ -52,10 +71,43 @@ function staffCanUpdate(previous, next) {
     soldQuantities.set(sale.phoneId, (soldQuantities.get(sale.phoneId) || 0) + sale.qty);
   }
 
+  for (const saleReturn of previous.saleReturns || []) {
+    if (!sameRecord(saleReturn, nextReturns.get(saleReturn.id))) return false;
+    previousReturnTotals.set(saleReturn.saleId, (previousReturnTotals.get(saleReturn.saleId) || 0) + saleReturn.qty);
+  }
+  for (const saleReturn of next.saleReturns || []) {
+    if (previousReturns.has(saleReturn.id)) continue;
+    const sale = previousSales.get(saleReturn.saleId);
+    if (!saleReturn.id || !sale || !saleReturn.date || saleReturn.date < sale.date ||
+        !Number.isInteger(Number(saleReturn.qty)) || saleReturn.qty < 1 ||
+        !Number.isFinite(Number(saleReturn.refundAmt)) || saleReturn.refundAmt < 0 ||
+        saleReturn.refundAmt > sale.price * saleReturn.qty) return false;
+    returnedQuantities.set(sale.phoneId, (returnedQuantities.get(sale.phoneId) || 0) + saleReturn.qty);
+    previousReturnTotals.set(sale.id, (previousReturnTotals.get(sale.id) || 0) + saleReturn.qty);
+  }
+  for (const [saleId, returnedQty] of previousReturnTotals) {
+    const sale = previousSales.get(saleId);
+    if (!sale || returnedQty > sale.qty) return false;
+  }
+  for (const saleReturn of next.saleReturns || []) {
+    if (!previousReturns.has(saleReturn.id)) continue;
+    const existingSale = previousSales.get(saleReturn.saleId);
+    const existingReturn = previousReturns.get(saleReturn.id);
+    if (!existingSale || !sameRecord(existingReturn, saleReturn)) return false;
+  }
+  for (const saleReturn of next.saleReturns || []) {
+    nextReturnTotals.set(saleReturn.saleId, (nextReturnTotals.get(saleReturn.saleId) || 0) + saleReturn.qty);
+    nextRefundTotals.set(saleReturn.saleId, (nextRefundTotals.get(saleReturn.saleId) || 0) + saleReturn.refundAmt);
+  }
+  for (const sale of next.sales) {
+    if (Number(sale.returnedQty || 0) !== (nextReturnTotals.get(sale.id) || 0) ||
+        Number(sale.returnRefund || 0) !== (nextRefundTotals.get(sale.id) || 0)) return false;
+  }
+
   for (const [id, phone] of previousPhones) {
     const updated = nextPhones.get(id);
     if (!updated) return false;
-    const expected = { ...phone, stock: phone.stock - (soldQuantities.get(id) || 0) };
+    const expected = { ...phone, stock: Number(phone.stock || 0) - (soldQuantities.get(id) || 0) + (deletedQuantities.get(id) || 0) + (returnedQuantities.get(id) || 0) };
     if (expected.stock < 0 || !sameRecord(expected, updated)) return false;
   }
 
@@ -226,7 +278,7 @@ export default function App() {
   const update = fn => {
     const n = fn(ref.current);
     if (role === 'staff' && !staffCanUpdate(ref.current, n)) {
-      setSt('Nhân viên chỉ được thêm điện thoại và đơn bán mới.');
+      setSt('Nhân viên chỉ được thêm điện thoại, đơn bán mới hoặc ghi nhận đổi trả hợp lệ.');
       return;
     }
     ref.current = n; setData(n); persist(n);
@@ -235,8 +287,21 @@ export default function App() {
   const enter = async (name, accountRole) => {
     const d = await api('/api/data');
     const nextRole = d.role || accountRole || 'staff';
-    const init = d.empty ? { phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [] } : {
-      phones: d.phones || [], sales: d.sales || [], exps: d.exps || [], manualRevenues: d.manualRevenues || [], repairRevenues: d.repairRevenues || []
+    const saleReturns = d.saleReturns || [];
+    const returnSummary = new Map();
+    for (const item of saleReturns) {
+      const current = returnSummary.get(item.saleId) || { returnedQty: 0, returnRefund: 0 };
+      current.returnedQty += Number(item.qty) || 0;
+      current.returnRefund += Number(item.refundAmt) || 0;
+      returnSummary.set(item.saleId, current);
+    }
+    const init = d.empty ? { phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [], saleReturns: [] } : {
+      phones: d.phones || [],
+      sales: (d.sales || []).map(sale => ({ ...sale, ...(returnSummary.get(sale.id) || {}) })),
+      exps: d.exps || [],
+      manualRevenues: d.manualRevenues || [],
+      repairRevenues: d.repairRevenues || [],
+      saleReturns
     };
     ref.current = init; setData(init); setUser(name); setRole(nextRole); setPhase('app'); setHasUsers(true);
     setTab(nextRole === 'staff' ? 'sale' : 'dash');
@@ -253,7 +318,7 @@ export default function App() {
   }, []);
 
   const logout = async () => { try { await api('/api/logout', 'POST'); } catch {} ref.current = null; setData(null); setRole(''); setPhase('login'); };
-  const clear = () => { if (confirm('Xóa toàn bộ điện thoại, đơn bán, doanh thu và chi tiêu?')) update(() => ({ phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [] })); };
+  const clear = () => { if (confirm('Xóa toàn bộ điện thoại, đơn bán, đổi trả, doanh thu và chi tiêu?')) update(() => ({ phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [], saleReturns: [] })); };
 
   if (phase === 'boot') return <div className="wrap"><div className="empty">Đang tải…</div></div>;
   if (phase === 'down') return <div className="wrap"><div className="card">Không kết nối được máy chủ. Hãy chắc chắn backend đang chạy (npm start) rồi tải lại trang.</div></div>;
