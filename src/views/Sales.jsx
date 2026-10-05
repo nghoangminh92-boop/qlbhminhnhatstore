@@ -29,11 +29,11 @@ export default function Sales({ data, month, update }) {
   const returnableSales = data.sales.filter(sale => sale.qty > (returnedBySale.get(sale.id) || 0));
   const selectedReturnSale = returnableSales.find(sale => sale.id === returnForm.saleId) || returnableSales[0];
   const cur = av.find(p => p.id === f.pid) || av[0];
-  const price = f.pr === '' ? (cur ? cur.price : '') : f.pr;
+  const price = f.pr === '' ? (cur?.price ?? '') : f.pr;
   const set = k => e => setF({ ...f, [k]: e.target.value, ...(k === 'pid' ? { pr: '' } : {}) });
   const add = () => {
     const q = +f.q, pr = +price;
-    if (!cur || !Number.isInteger(q) || q < 1 || !Number.isFinite(pr) || pr < 0) return alert('Kiểm tra lại số lượng và giá bán.');
+    if (!cur || !Number.isInteger(q) || q < 1 || price === '' || !Number.isFinite(pr) || pr < 0) return alert('Kiểm tra lại số lượng và nhập giá bán.');
     if (q > cur.stock) return alert(`Kho chỉ còn ${cur.stock} máy ${pname(cur)}.`);
     update(S => ({
       ...S,
@@ -97,7 +97,7 @@ export default function Sales({ data, month, update }) {
         <div style={{ gridColumn: 'span 2' }}><label>Điện thoại</label>
           <select value={cur.id} onChange={set('pid')}>{av.map(p => <option key={p.id} value={p.id}>{pname(p)} (còn {p.stock})</option>)}</select></div>
         <div><label>Số lượng</label><input type="number" min="1" step="1" value={f.q} onChange={set('q')} /></div>
-        <div><label>Giá bán (₫)</label><input type="number" min="0" value={price} onChange={set('pr')} /></div>
+        <div><label>Giá bán (₫)</label><input type="number" min="0" value={price} onChange={set('pr')} placeholder="Nhập giá bán" /></div>
         <div><label>Khách hàng</label><input placeholder="Khách lẻ" value={f.cust} onChange={set('cust')} /></div>
         <div><label>Thanh toán</label><select value={f.pay} onChange={set('pay')}>{PAYS.map(p => <option key={p}>{p}</option>)}</select></div>
         <div><label>Ngày</label><input lang="vi" type="date" value={f.d} onChange={set('d')} /></div>
