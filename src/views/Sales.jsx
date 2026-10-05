@@ -14,7 +14,18 @@ export default function Sales({ data, month, update }) {
     returnedBySale.set(item.saleId, (returnedBySale.get(item.saleId) || 0) + item.qty);
     refundBySale.set(item.saleId, (refundBySale.get(item.saleId) || 0) + item.refundAmt);
   }
-  const monthNetSales = s.sl.reduce((total, sale) => total + sale.price * sale.qty - (refundBySale.get(sale.id) || 0), 0);
+  const monthNetSales = s.salesRev - s.returnRefund;
+  const monthlySales = [...s.sl].sort((a, b) => b.date.localeCompare(a.date)).map(sale => {
+    const returnedQty = sale.returnedQty ?? returnedBySale.get(sale.id) ?? 0;
+    const refundAmt = sale.returnRefund ?? refundBySale.get(sale.id) ?? 0;
+    const netAmount = sale.price * sale.qty - refundAmt;
+    return {
+      sale,
+      returnedQty,
+      netAmount,
+      netProfit: netAmount - sale.cost * (sale.qty - returnedQty)
+    };
+  });
   const returnableSales = data.sales.filter(sale => sale.qty > (returnedBySale.get(sale.id) || 0));
   const selectedReturnSale = returnableSales.find(sale => sale.id === returnForm.saleId) || returnableSales[0];
   const cur = av.find(p => p.id === f.pid) || av[0];
@@ -114,14 +125,19 @@ export default function Sales({ data, month, update }) {
         <button className="p" onClick={addReturn}>Lưu đổi trả &amp; cộng lại kho</button>
       </div> : <Empty>Không còn đơn bán nào có số lượng được đổi trả.</Empty>}
     </div>
-    <div className="card"><h2>Đơn bán tháng {ml(month)} ({s.sl.length} đơn) — doanh thu sau hoàn: {fmt(monthNetSales)}</h2>
+    <div className="card"><h2>Đơn bán tháng {ml(month)} ({s.sl.length} đơn)</h2>
+      <div className="sp" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+        <span>Doanh thu bán trong tháng: <b>{fmt(s.salesRev)}</b></span>
+        <span>Hoàn trả trong tháng: <b>{fmt(s.returnRefund)} ({s.returnedUnits} máy)</b></span>
+        <span>Doanh thu bán ròng tháng: <b>{fmt(monthNetSales)}</b></span>
+      </div>
       <p style={{ color: 'var(--mute)', fontSize: 13, margin: '0 0 10px' }}>Muốn sửa giá đơn chưa đổi trả: xóa đơn để kho cộng lại máy, sau đó ghi đơn bán mới với giá đúng. Đơn đã đổi trả cần giữ nguyên lịch sử.</p>
-      <div className="scroll">{s.sl.length ? <table><thead><tr><th>Ngày</th><th>Điện thoại</th><th className="n">SL bán</th><th className="n">Đã trả</th><th className="n">SL còn bán</th><th className="n">Thành tiền sau hoàn</th><th className="n">Lãi sau hoàn</th><th>Khách</th><th>Thanh toán</th><th /></tr></thead>
-        <tbody>{[...s.sl].sort((a, b) => b.date.localeCompare(a.date)).map(x => <tr key={x.id}>
+      <div className="scroll">{s.sl.length ? <table><thead><tr><th>Ngày</th><th>Điện thoại</th><th className="n">SL bán</th><th className="n">Đã trả lũy kế</th><th className="n">SL còn bán</th><th className="n">Thành tiền còn lại</th><th className="n">Lãi sau hoàn</th><th>Khách</th><th>Thanh toán</th><th /></tr></thead>
+        <tbody>{monthlySales.map(({ sale: x, returnedQty, netAmount, netProfit }) => <tr key={x.id}>
           <td><input lang="vi" aria-label={`Ngày bán ${x.name}`} type="date" value={x.date} onChange={e => changeDate(x.id, e.target.value)} disabled={(x.returnedQty || returnedBySale.get(x.id) || 0) > 0} style={{ minWidth: 145, padding: '4px 6px' }} /></td>
-          <td>{x.name}</td><td className="n">{x.qty}</td><td className="n">{x.returnedQty ?? returnedBySale.get(x.id) ?? 0}</td>
-          <td className="n">{x.qty - (x.returnedQty ?? returnedBySale.get(x.id) ?? 0)}</td><td className="n">{fmt(x.price * x.qty - (x.returnRefund ?? refundBySale.get(x.id) ?? 0))}</td>
-          <td className={'n ' + (x.price >= x.cost ? 'pos' : 'neg')}>{fmt((x.price - x.cost) * (x.qty - (x.returnedQty ?? returnedBySale.get(x.id) ?? 0)) - (x.returnRefund ?? refundBySale.get(x.id) ?? 0))}</td><td>{x.cust}</td><td>{x.pay}</td>
+          <td>{x.name}</td><td className="n">{x.qty}</td><td className="n">{returnedQty}</td>
+          <td className="n">{x.qty - returnedQty}</td><td className="n">{fmt(netAmount)}</td>
+          <td className={'n ' + (netProfit >= 0 ? 'pos' : 'neg')}>{fmt(netProfit)}</td><td>{x.cust}</td><td>{x.pay}</td>
           <td><button className="x" onClick={() => del(x)} disabled={(x.returnedQty || returnedBySale.get(x.id) || 0) > 0}>Xóa</button></td></tr>)}</tbody></table> : <Empty>Chưa có đơn bán nào trong tháng này.</Empty>}</div>
     </div>
     <div className="card"><h2>Đổi trả tháng {ml(month)}</h2>

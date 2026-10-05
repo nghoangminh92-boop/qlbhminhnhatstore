@@ -11,9 +11,9 @@ export default function Inventory({ data, month, update }) {
   const [f, setF] = useState(() => blankForm(month)), [editId, setEditId] = useState(null), [q, setQ] = useState('');
   const set = k => e => setF({ ...f, [k]: e.target.value });
   const ql = q.toLowerCase();
-  const monthlyPhones = data.phones.filter(p => p.stockDate?.slice(0, 7) === month);
-  const list = monthlyPhones.filter(p => pname(p).toLowerCase().includes(ql) || p.color.toLowerCase().includes(ql));
-  const val = monthlyPhones.reduce((a, p) => a + p.cost * p.stock, 0);
+  const inventoryPhones = data.phones;
+  const list = inventoryPhones.filter(p => pname(p).toLowerCase().includes(ql) || p.color.toLowerCase().includes(ql));
+  const val = inventoryPhones.reduce((a, p) => a + p.cost * Number(p.stock || 0), 0);
   const submit = () => {
     const stock = f.stock === '' ? 0 : Number(f.stock);
     const o = { brand: f.brand.trim(), model: f.model.trim(), storage: f.storage.trim(), color: f.color.trim(), cost: Number(f.cost), price: Number(f.price), stock, stockDate: f.stockDate };
@@ -42,16 +42,19 @@ export default function Inventory({ data, month, update }) {
     </div>
     <div className="card">
       <div className="sp" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-        <h2 style={{ margin: 0 }}>Kho nhập tháng {ml(month)} ({monthlyPhones.length} mẫu, vốn tồn hiện tại {sh(val)})</h2>
+        <h2 style={{ margin: 0 }}>Tồn kho hiện tại ({inventoryPhones.length} mẫu, vốn tồn {sh(val)})</h2>
         <input placeholder="Tìm theo tên, màu…" value={q} onChange={e => setQ(e.target.value)} style={{ maxWidth: 220 }} />
       </div>
-      {data.phones.some(p => !p.stockDate) && <p style={{ color: 'var(--mute)', fontSize: 13 }}>
-        Có {data.phones.filter(p => !p.stockDate).length} mặt hàng cũ chưa có ngày nhập kho nên chưa thể xếp vào tháng.
+      <p style={{ color: 'var(--mute)', fontSize: 13, margin: '0 0 10px' }}>
+        Tồn kho hiện tại bao gồm hàng nhập và hàng được cộng lại sau khi xóa đơn bán hoặc ghi nhận đổi trả.
+      </p>
+      {inventoryPhones.some(p => !p.stockDate) && <p style={{ color: 'var(--mute)', fontSize: 13 }}>
+        Có {inventoryPhones.filter(p => !p.stockDate).length} mặt hàng cũ chưa có ngày nhập kho.
       </p>}
-      <div className="scroll">{list.length ? <table><thead><tr><th>Điện thoại</th><th>Màu</th><th className="n">Giá nhập</th><th className="n">Giá bán</th><th className="n">Lãi/máy</th><th className="n">Tồn</th><th /></tr></thead>
+      <div className="scroll">{list.length ? <table><thead><tr><th>Điện thoại</th><th>Màu</th><th>Ngày nhập</th><th className="n">Giá nhập</th><th className="n">Giá bán</th><th className="n">Lãi/máy</th><th className="n">Tồn</th><th /></tr></thead>
         <tbody>{list.map(p => <tr key={p.id}>
-          <td>{pname(p)}</td><td>{p.color}</td><td className="n">{fmt(p.cost)}</td><td className="n">{fmt(p.price)}</td><td className="n pos">{fmt(p.price - p.cost)}</td>
-          <td className="n"><span className={'tag' + (p.stock <= 2 ? ' l' : '')}>{p.stock}</span></td>
+          <td>{pname(p)}</td><td>{p.color}</td><td>{p.stockDate || '—'}</td><td className="n">{fmt(p.cost)}</td><td className="n">{fmt(p.price)}</td><td className="n pos">{fmt(p.price - p.cost)}</td>
+          <td className="n"><span className={'tag' + (Number(p.stock || 0) <= 2 ? ' l' : '')}>{Number(p.stock || 0)}</span></td>
           <td><button className="x" style={{ color: 'var(--acc)' }} onClick={() => edit(p)}>Sửa</button><button className="x" onClick={() => del(p.id)}>Xóa</button></td></tr>)}</tbody></table> : <Empty>Không tìm thấy máy nào.</Empty>}</div>
     </div>
   </>;

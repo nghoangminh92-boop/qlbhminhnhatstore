@@ -107,7 +107,9 @@ function staffCanUpdate(previous, next) {
   for (const [id, phone] of previousPhones) {
     const updated = nextPhones.get(id);
     if (!updated) return false;
-    const expected = { ...phone, stock: Number(phone.stock || 0) - (soldQuantities.get(id) || 0) + (deletedQuantities.get(id) || 0) + (returnedQuantities.get(id) || 0) };
+    const stockChange = -(soldQuantities.get(id) || 0) + (deletedQuantities.get(id) || 0) + (returnedQuantities.get(id) || 0);
+    const expectedStock = stockChange === 0 ? phone.stock : Number(phone.stock || 0) + stockChange;
+    const expected = { ...phone, stock: expectedStock };
     if (expected.stock < 0 || !sameRecord(expected, updated)) return false;
   }
 
@@ -297,7 +299,11 @@ export default function App() {
     }
     const init = d.empty ? { phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [], saleReturns: [] } : {
       phones: d.phones || [],
-      sales: (d.sales || []).map(sale => ({ ...sale, ...(returnSummary.get(sale.id) || {}) })),
+      sales: (d.sales || []).map(sale => ({
+        ...sale,
+        returnedQty: returnSummary.get(sale.id)?.returnedQty || 0,
+        returnRefund: returnSummary.get(sale.id)?.returnRefund || 0
+      })),
       exps: d.exps || [],
       manualRevenues: d.manualRevenues || [],
       repairRevenues: d.repairRevenues || [],

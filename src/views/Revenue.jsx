@@ -25,23 +25,24 @@ export default function Revenue({ data, month, update }) {
 
   const daily = new Map();
   current.sl.forEach(sale => {
-    const row = daily.get(sale.date) || { date: sale.date, sales: 0, returned: 0, entered: 0, repairs: 0 };
+    const row = daily.get(sale.date) || { date: sale.date, sales: 0, returned: 0, returnedUnits: 0, entered: 0, repairs: 0 };
     row.sales += sale.price * sale.qty;
     daily.set(sale.date, row);
   });
   current.manual.forEach(entry => {
-    const row = daily.get(entry.date) || { date: entry.date, sales: 0, returned: 0, entered: 0, repairs: 0 };
+    const row = daily.get(entry.date) || { date: entry.date, sales: 0, returned: 0, returnedUnits: 0, entered: 0, repairs: 0 };
     row.entered += entry.amt;
     daily.set(entry.date, row);
   });
   current.repairs.forEach(entry => {
-    const row = daily.get(entry.date) || { date: entry.date, sales: 0, returned: 0, entered: 0, repairs: 0 };
+    const row = daily.get(entry.date) || { date: entry.date, sales: 0, returned: 0, returnedUnits: 0, entered: 0, repairs: 0 };
     row.repairs += entry.amt;
     daily.set(entry.date, row);
   });
   current.saleReturns.forEach(entry => {
-    const row = daily.get(entry.date) || { date: entry.date, sales: 0, returned: 0, entered: 0, repairs: 0 };
+    const row = daily.get(entry.date) || { date: entry.date, sales: 0, returned: 0, returnedUnits: 0, entered: 0, repairs: 0 };
     row.returned += entry.refundAmt;
+    row.returnedUnits += entry.qty;
     daily.set(entry.date, row);
   });
   const days = [...daily.values()].sort((a, b) => b.date.localeCompare(a.date));
@@ -115,16 +116,16 @@ export default function Revenue({ data, month, update }) {
     <div className="card">
       <h2>Doanh thu theo ngày — tháng {ml(month)}</h2>
       <p style={{ color: 'var(--mute)', fontSize: 13, margin: '0 0 10px' }}>Doanh thu ngày gồm đơn bán, trừ tiền hoàn đổi trả, cộng khoản nhập trực tiếp và sửa chữa.</p>
-      <div className="scroll">{days.length ? <table><thead><tr><th>Ngày</th><th className="n">Đơn bán</th><th className="n">Hoàn đổi trả</th><th className="n">Nhập trực tiếp</th><th className="n">Sửa chữa</th><th className="n">Tổng doanh thu</th></tr></thead>
+      <div className="scroll">{days.length ? <table><thead><tr><th>Ngày</th><th className="n">Đơn bán</th><th className="n">Hoàn đổi trả</th><th className="n">Máy trả</th><th className="n">Nhập trực tiếp</th><th className="n">Sửa chữa</th><th className="n">Tổng doanh thu</th></tr></thead>
         <tbody>{days.map(day => <tr key={day.date}>
-          <td>{dm(day.date)}</td><td className="n">{fmt(day.sales)}</td><td className="n">{fmt(day.returned || 0)}</td><td className="n">{fmt(day.entered)}</td><td className="n">{fmt(day.repairs || 0)}</td><td className="n"><b>{fmt(day.sales - (day.returned || 0) + day.entered + (day.repairs || 0))}</b></td>
+          <td>{dm(day.date)}</td><td className="n">{fmt(day.sales)}</td><td className="n">{fmt(day.returned || 0)}</td><td className="n">{day.returnedUnits}</td><td className="n">{fmt(day.entered)}</td><td className="n">{fmt(day.repairs || 0)}</td><td className="n"><b>{fmt(day.sales - (day.returned || 0) + day.entered + (day.repairs || 0))}</b></td>
         </tr>)}</tbody></table> : <Empty>Chưa có doanh thu trong tháng này.</Empty>}</div>
     </div>
     <div className="card">
       <h2>Doanh thu theo tháng — 12 tháng gần nhất</h2>
-      <div className="scroll"><table><thead><tr><th>Tháng</th><th className="n">Đơn bán</th><th className="n">Hoàn đổi trả</th><th className="n">Nhập trực tiếp</th><th className="n">Sửa chữa</th><th className="n">Tổng doanh thu</th><th className="n">Số máy bán</th></tr></thead>
+      <div className="scroll"><table><thead><tr><th>Tháng</th><th className="n">Đơn bán</th><th className="n">Hoàn đổi trả</th><th className="n">Máy trả</th><th className="n">Nhập trực tiếp</th><th className="n">Sửa chữa</th><th className="n">Tổng doanh thu</th><th className="n">Số máy bán</th></tr></thead>
         <tbody>{monthly.map(row => <tr key={row.key}>
-          <td>{ml(row.key)}</td><td className="n">{fmt(row.salesRev)}</td><td className="n">{fmt(row.returnRefund)}</td><td className="n">{fmt(row.manualRev)}</td><td className="n">{fmt(row.repairRev)}</td><td className="n"><b>{fmt(row.rev)}</b></td><td className="n">{row.units}</td>
+          <td>{ml(row.key)}</td><td className="n">{fmt(row.salesRev)}</td><td className="n">{fmt(row.returnRefund)}</td><td className="n">{row.returnedUnits}</td><td className="n">{fmt(row.manualRev)}</td><td className="n">{fmt(row.repairRev)}</td><td className="n"><b>{fmt(row.rev)}</b></td><td className="n">{row.units}</td>
         </tr>)}</tbody></table></div>
     </div>
     <div className="card">
