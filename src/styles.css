@@ -508,6 +508,16 @@ body{margin:0}
 .dashboard-history-column>span{color:#8a7e7e;font-size:10px}
 .dashboard-revenue-history .dashboard-chart-legend{margin-top:13px}
 .dashboard .empty{font-size:13px}
+.inventory-permission-note{
+  margin:0 0 12px;
+  padding:10px 12px;
+  border:1px solid #f0dfdf;
+  border-radius:8px;
+  background:#fff8f8;
+  color:#800000;
+  font-size:12px;
+  line-height:1.6;
+}
 
 @media(max-width:1200px){
   .store-header-actions{flex-wrap:wrap;justify-content:flex-end}

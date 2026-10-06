@@ -7,7 +7,7 @@ const blankForm = month => ({
   stockDate: month === today().slice(0, 7) ? today() : `${month}-01`
 });
 
-export default function Inventory({ data, month, update }) {
+export default function Inventory({ data, month, update, role }) {
   const [f, setF] = useState(() => blankForm(month)), [editId, setEditId] = useState(null), [q, setQ] = useState('');
   useEffect(() => {
     if (!editId) setF(current => ({ ...current, stockDate: blankForm(month).stockDate }));
@@ -19,6 +19,7 @@ export default function Inventory({ data, month, update }) {
   const legacyCount = inventoryPhones.filter(phone => !phone.stockDate).length;
   const list = monthPhones.filter(p => pname(p).toLowerCase().includes(ql) || p.color.toLowerCase().includes(ql));
   const val = monthPhones.reduce((a, p) => a + p.cost * Number(p.stock || 0), 0);
+  const canEditInventory = role !== 'staff';
   const submit = async () => {
     const stock = f.stock === '' ? 0 : Number(f.stock);
     const existing = data.phones.find(phone => phone.id === editId);
@@ -64,6 +65,9 @@ export default function Inventory({ data, month, update }) {
       <p style={{ color: 'var(--mute)', fontSize: 13, margin: '0 0 10px' }}>
         Danh sách lọc theo ngày nhập kho của tháng đang chọn. Số tồn hiển thị là tồn kho hiện tại của từng mẫu.
       </p>
+      {!canEditInventory && <p className="inventory-permission-note" role="note">
+        Tài khoản Nhân viên chỉ được thêm mặt hàng mới; quyền sửa hoặc xóa mặt hàng có sẵn dành cho Quản lý/Admin.
+      </p>}
       {legacyCount > 0 && <p style={{ color: 'var(--mute)', fontSize: 13 }}>
         Có {legacyCount} mặt hàng cũ chưa có ngày nhập kho nên chưa thể xếp vào tháng. Hãy sửa mặt hàng để bổ sung ngày.
       </p>}
@@ -71,7 +75,7 @@ export default function Inventory({ data, month, update }) {
         <tbody>{list.map(p => <tr key={p.id}>
           <td>{pname(p)}</td><td>{p.color}</td><td>{p.stockDate || '—'}</td><td className="n">{fmt(p.cost)}</td>
           <td className="n"><span className={'tag' + (Number(p.stock || 0) <= 2 ? ' l' : '')}>{Number(p.stock || 0)}</span></td>
-          <td><button className="x" style={{ color: 'var(--acc)' }} onClick={() => edit(p)}>Sửa</button><button className="x" onClick={() => del(p.id)}>Xóa</button></td></tr>)}</tbody></table> : <Empty>Không tìm thấy máy nào.</Empty>}</div>
+          <td>{canEditInventory && <><button className="x" style={{ color: 'var(--acc)' }} onClick={() => edit(p)}>Sửa</button><button className="x" onClick={() => del(p.id)}>Xóa</button></>}</td></tr>)}</tbody></table> : <Empty>Không tìm thấy máy nào trong tháng đã chọn.</Empty>}</div>
     </div>
   </>;
 }
