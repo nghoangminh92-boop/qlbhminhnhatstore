@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
-import { ymOf } from './lib';
+import { ymOf, pname } from './lib';
 import Dashboard from './views/Dashboard';
 import Sales from './views/Sales';
 import Inventory from './views/Inventory';
@@ -36,6 +36,38 @@ function sameRepairRevenues(left = [], right = []) {
     }))
     .sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
   return sameRecord(normalize(left), normalize(right));
+}
+
+function stockDateStorageKey(username) {
+  return `minh-nhat-store:stock-dates:${encodeURIComponent(username || '')}`;
+}
+
+function readCachedStockDates(username) {
+  try {
+    const saved = localStorage.getItem(stockDateStorageKey(username));
+    if (!saved) return {};
+    const dates = JSON.parse(saved);
+    if (!dates || typeof dates !== 'object' || Array.isArray(dates)) {
+      throw new Error('Dữ liệu ngày nhập kho lưu trên trình duyệt không hợp lệ.');
+    }
+    return dates;
+  } catch (error) {
+    console.error('Không thể đọc ngày nhập kho đã lưu trên trình duyệt:', error);
+    return {};
+  }
+}
+
+function cacheStockDates(username, phones) {
+  try {
+    const dates = Object.fromEntries(phones
+      .filter(phone => phone.stockDate)
+      .map(phone => [String(phone.id), phone.stockDate]));
+    localStorage.setItem(stockDateStorageKey(username), JSON.stringify(dates));
+    return true;
+  } catch (error) {
+    console.error('Không thể lưu ngày nhập kho trên trình duyệt:', error);
+    return false;
+  }
 }
 
 function staffCanUpdate(previous, next) {
@@ -266,36 +298,70 @@ function Login({ hasUsers, onDone }) {
   </div>;
 }
 
+function StartupScreen({ failed = false }) {
+  return <main className="store-startup" role={failed ? 'alert' : 'status'} aria-live={failed ? 'assertive' : 'polite'}>
+    <section className="store-startup-card">
+      <div className="store-startup-brand"><span className="store-startup-mark">M</span><span><strong>MINH NHẬT STORE</strong><small>HỆ THỐNG QUẢN LÝ BÁN HÀNG</small></span></div>
+      <div className={`store-startup-illustration${failed ? ' failed' : ''}`}>
+        {failed ? <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M19 44h27a11 11 0 0 0 1-22 16 16 0 0 0-30-2 12 12 0 0 0 2 24Z" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /><path d="m25 29 14 14m0-14L25 43" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
+          : <span className="store-startup-spinner" />}
+      </div>
+      <h1>{failed ? 'Chưa kết nối được máy chủ' : 'Đang mở không gian làm việc'}</h1>
+      <p>{failed ? 'Máy chủ chưa phản hồi. Kiểm tra kết nối mạng hoặc trạng thái API, sau đó thử tải lại.' : 'Đang kết nối an toàn và đồng bộ dữ liệu cửa hàng của bạn.'}</p>
+      {!failed && <div className="store-startup-skeleton" aria-hidden="true"><i /><i /><i /></div>}
+      {failed && <button className="store-startup-retry" onClick={() => window.location.reload()}>Thử kết nối lại</button>}
+      <span className="store-startup-footnote">{failed ? 'Dữ liệu không bị thay đổi trong quá trình kết nối.' : 'Vui lòng đợi trong giây lát'}</span>
+    </section>
+  </main>;
+}
+
 export default function App() {
   const [phase, setPhase] = useState('boot');     // boot | login | app | down
   const [hasUsers, setHasUsers] = useState(true);
   const [user, setUser] = useState('');
   const [role, setRole] = useState('');
   const [data, setData] = useState(null);
-  const [tab, setTab] = useState('dash');
+  const [tab, setTab] = useState(() => window.location.hash.slice(1) || 'dash');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [month, setMonth] = useState(ymOf(new Date()));
   const [st, setSt] = useState('');
   const [passwordOpen, setPasswordOpen] = useState(false);
   const ref = useRef(null), timer = useRef(null);
-  const saveWaiters = useRef([]), verifyRepairsOnSave = useRef(false);
+  const saveWaiters = useRef([]), verifyRepairsOnSave = useRef(false), verifyStockDatesOnSave = useRef(false);
 
-  const persist = (d, verifyRepairs = false) => new Promise(resolve => {
+  const persist = (d, verifyRepairs = false, verifyStockDates = false) => new Promise(resolve => {
     setSt('Đang lưu…'); clearTimeout(timer.current);
     saveWaiters.current.push(resolve);
     verifyRepairsOnSave.current = verifyRepairsOnSave.current || verifyRepairs;
+    verifyStockDatesOnSave.current = verifyStockDatesOnSave.current || verifyStockDates;
     timer.current = setTimeout(async () => {
       const waiters = saveWaiters.current.splice(0);
       const shouldVerifyRepairs = verifyRepairsOnSave.current;
+      const shouldVerifyStockDates = verifyStockDatesOnSave.current;
       verifyRepairsOnSave.current = false;
+      verifyStockDatesOnSave.current = false;
       try {
         await api('/api/data', 'PUT', d);
-        if (shouldVerifyRepairs) {
+        if (shouldVerifyRepairs || shouldVerifyStockDates) {
           const saved = await api('/api/data');
-          if (!sameRepairRevenues(d.repairRevenues || [], saved.repairRevenues || [])) {
+          if (shouldVerifyRepairs && !sameRepairRevenues(d.repairRevenues || [], saved.repairRevenues || [])) {
             throw new Error('Máy chủ chưa lưu doanh thu sửa chữa. Cần cập nhật API /api/data của backend.');
           }
+          const expectedStockDates = new Map(d.phones.map(phone => [String(phone.id), phone.stockDate || '']));
+          const savedStockDates = new Map((saved.phones || []).map(phone => [String(phone.id), phone.stockDate || '']));
+          if (shouldVerifyStockDates && (expectedStockDates.size !== savedStockDates.size ||
+              [...expectedStockDates].some(([id, date]) => savedStockDates.get(id) !== date))) {
+            if (!cacheStockDates(user, d.phones)) {
+              throw new Error('Máy chủ chưa lưu ngày nhập kho và trình duyệt không thể lưu bản dự phòng. Hãy kiểm tra quyền lưu trữ của trình duyệt.');
+            }
+            setSt('Ngày nhập kho đang được giữ trên trình duyệt; API backend chưa lưu trường stockDate.');
+            waiters.forEach(done => done(true));
+            return;
+          }
         }
+        if (shouldVerifyStockDates) cacheStockDates(user, d.phones);
         setSt('Đã lưu');
         waiters.forEach(done => done(true));
       } catch (e) {
@@ -315,13 +381,21 @@ export default function App() {
       ref.current.repairRevenues || [],
       n.repairRevenues || []
     );
+    const stockDatesChanged = JSON.stringify(ref.current.phones.map(phone => [phone.id, phone.stockDate || '']).sort()) !==
+      JSON.stringify(n.phones.map(phone => [phone.id, phone.stockDate || '']).sort());
     ref.current = n; setData(n);
-    return persist(n, repairRevenuesChanged);
+    return persist(n, repairRevenuesChanged, stockDatesChanged);
   };
 
   const enter = async (name, accountRole) => {
     const d = await api('/api/data');
     const nextRole = d.role || accountRole || 'staff';
+    const availableTabs = nextRole === 'staff'
+      ? TABS.filter(item => item[0] === 'sale' || item[0] === 'inv')
+      : ['admin', 'owner', 'manager'].includes(nextRole)
+        ? [...TABS, ['accounts']]
+        : TABS;
+    const requestedTab = window.location.hash.slice(1);
     const saleReturns = d.saleReturns || [];
     const returnSummary = new Map();
     for (const item of saleReturns) {
@@ -330,8 +404,13 @@ export default function App() {
       current.returnRefund += Number(item.refundAmt) || 0;
       returnSummary.set(item.saleId, current);
     }
+    const cachedStockDates = readCachedStockDates(name);
+    const phones = (d.phones || []).map(phone => ({
+      ...phone,
+      stockDate: phone.stockDate || cachedStockDates[String(phone.id)] || ''
+    }));
     const init = d.empty ? { phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [], saleReturns: [] } : {
-      phones: d.phones || [],
+      phones,
       sales: (d.sales || []).map(sale => ({
         ...sale,
         returnedQty: returnSummary.get(sale.id)?.returnedQty || 0,
@@ -343,7 +422,7 @@ export default function App() {
       saleReturns
     };
     ref.current = init; setData(init); setUser(name); setRole(nextRole); setPhase('app'); setHasUsers(true);
-    setTab(nextRole === 'staff' ? 'sale' : 'dash');
+    setTab(availableTabs.some(item => item[0] === requestedTab) ? requestedTab : nextRole === 'staff' ? 'sale' : 'dash');
     setSt('');
   };
 
@@ -356,11 +435,17 @@ export default function App() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (phase === 'app' && tab && window.location.hash !== `#${tab}`) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${tab}`);
+    }
+  }, [phase, tab]);
+
   const logout = async () => { try { await api('/api/logout', 'POST'); } catch {} ref.current = null; setData(null); setRole(''); setPhase('login'); };
   const clear = () => { if (confirm('Xóa toàn bộ điện thoại, đơn bán, đổi trả, doanh thu và chi tiêu?')) update(() => ({ phones: [], sales: [], exps: [], manualRevenues: [], repairRevenues: [], saleReturns: [] })); };
 
-  if (phase === 'boot') return <div className="wrap"><div className="empty">Đang tải…</div></div>;
-  if (phase === 'down') return <div className="wrap"><div className="card">Không kết nối được máy chủ. Hãy chắc chắn backend đang chạy (npm start) rồi tải lại trang.</div></div>;
+  if (phase === 'boot') return <StartupScreen />;
+  if (phase === 'down') return <StartupScreen failed />;
   if (phase === 'login') return <Login hasUsers={hasUsers} onDone={enter} />;
 
   const canManage = role === 'admin' || role === 'owner' || role === 'manager';
@@ -371,12 +456,19 @@ export default function App() {
       : TABS;
   const View = (tabs.find(t => t[0] === tab) || tabs[0])[2];
   const activeTab = tabs.find(t => t[0] === tab) || tabs[0];
+  const searchQuery = searchTerm.trim().toLocaleLowerCase('vi');
+  const searchResults = searchQuery ? [
+    ...data.phones.map(phone => ({ label: pname(phone), detail: `Kho · còn ${phone.stock}`, tab: 'inv' })),
+    ...data.sales.map(sale => ({ label: sale.name, detail: `Đơn bán · ${sale.cust || 'Khách lẻ'} · ${sale.date}`, tab: 'sale' })),
+    ...data.exps.map(expense => ({ label: expense.note || expense.cat, detail: `Chi tiêu · ${expense.date}`, tab: 'exp' }))
+  ].filter(result => `${result.label} ${result.detail}`.toLocaleLowerCase('vi').includes(searchQuery)).slice(0, 6) : [];
   return <div className="store-shell">
     {menuOpen && <button className="store-scrim" aria-label="Đóng menu" onClick={() => setMenuOpen(false)} />}
     <aside className={`store-sidebar${menuOpen ? ' open' : ''}`} aria-label="Điều hướng cửa hàng">
       <button className="store-brand" title="Minh Nhật Store" aria-label="Minh Nhật Store" onClick={() => { setTab('dash'); setMenuOpen(false); }}>
         <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M16 3 19 7l-3 3-3-3 3-4ZM7 11l9 9 9-9M7 11v13c0 2-1 3-3 4V15c0-2 2-3 3-1l6 6c2 2 4 2 6 0l6-6c2-2 3-1 3 1v13c-2-1-3-2-3-4V11" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
+      <div className="store-sidebar-brand"><strong>MINH NHẬT</strong><span>STORE MANAGEMENT</span></div>
       <nav className="store-nav" aria-label="Các chức năng">
         {tabs.map(item => <button
           key={item[0]}
@@ -391,9 +483,6 @@ export default function App() {
         <span className="store-side-divider" />
         <button className="store-nav-button" title="Đổi mật khẩu" aria-label="Đổi mật khẩu" onClick={() => { setPasswordOpen(true); setMenuOpen(false); }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 2 11 12m10-10-6 20-4-9-9-4 20-7Z" /></svg><span>Đổi mật khẩu</span>
-        </button>
-        <button className="store-profile" title={`${user} · ${ROLE_NAMES[role] || role}`} aria-label={`Tài khoản ${user}`}>
-          {String(user || 'U').slice(0, 1).toUpperCase()}
         </button>
         <button className="store-nav-button store-logout" title="Đăng xuất" aria-label="Đăng xuất" onClick={logout}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3m9-9h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" /></svg><span>Đăng xuất</span>
@@ -414,10 +503,34 @@ export default function App() {
           <h1>{activeTab[1]}</h1>
         </div>
         <div className="store-header-actions">
+          <div className="store-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg>
+            <input
+              type="search"
+              value={searchTerm}
+              placeholder="Tìm sản phẩm, đơn bán..."
+              aria-label="Tìm kiếm toàn trang"
+              aria-expanded={searchOpen && Boolean(searchQuery)}
+              onFocus={() => setSearchOpen(true)}
+              onChange={event => { setSearchTerm(event.target.value); setSearchOpen(true); }}
+              onKeyDown={event => {
+                if (event.key === 'Escape') { setSearchTerm(''); setSearchOpen(false); }
+                if (event.key === 'Enter' && searchResults[0]) { setTab(searchResults[0].tab); setSearchTerm(''); setSearchOpen(false); }
+              }}
+            />
+            {searchOpen && searchQuery && <div className="store-search-results">
+              {searchResults.length ? searchResults.map((result, index) => <button key={`${result.tab}-${result.label}-${index}`} onMouseDown={event => event.preventDefault()} onClick={() => {
+                setTab(result.tab); setSearchTerm(''); setSearchOpen(false);
+              }}><strong>{result.label}</strong><span>{result.detail}</span></button>) : <p>Không tìm thấy kết quả phù hợp.</p>}
+            </div>}
+          </div>
+          <span className="store-notification" role="img" aria-label="Thông báo cửa hàng, có cập nhật mới">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 12h4" /></svg><i />
+          </span>
           <label className="store-month-picker" htmlFor="mon"><span>Tháng</span><input id="mon" lang="vi" type="month" value={month} onChange={e => e.target.value && setMonth(e.target.value)} /></label>
           {canManage && <button className="store-clear-button" onClick={clear} title="Xóa toàn bộ dữ liệu để bắt đầu từ đầu">Xóa sạch</button>}
           <span id="st" className={`store-save-status${st.startsWith('Lưu lỗi') ? ' has-error' : ''}`} role="status">{st}</span>
-          <span className="store-user-badge"><i>{String(user || 'U').slice(0, 1).toUpperCase()}</i><span>{user}<small>{ROLE_NAMES[role] || role}</small></span></span>
+          <span className="store-user-badge"><i>{String(user || 'U').slice(0, 1).toUpperCase()}</i><span>Minh Nhật Store<small>{user} · {ROLE_NAMES[role] || role}</small></span></span>
         </div>
       </header>
       <main className="store-content"><View data={data} month={month} update={update} role={role} username={user} /></main>

@@ -34,6 +34,6 @@ Nếu chưa đặt `VITE_API_URL`, ứng dụng gọi `/api` trên chính domain
 - `src/lib.js`: định dạng tiền và tính toán doanh thu/chi phí. Tài khoản mới bắt đầu với dữ liệu trống.
 - `src/views/`: từng màn hình được tách riêng theo chức năng (Tổng quan, Bán hàng, Kho, Chi tiêu, Doanh thu, Báo cáo); phần Doanh thu/Chi tiêu hỗ trợ nhập `.xlsx`/`.xlsm`/`.csv` có xem trước, chọn cột ngày, số tiền, ghi chú và khoản mục; báo cáo xuất Excel chi tiết theo tháng đã chọn, gồm ngày bán và thông tin từng dòng máy.
 - `src/views/Accounts.jsx`: giao diện quản lý tài khoản dùng `/api/accounts`; owner tạo nhân viên/quản lý và quản lý nhân viên; manager chỉ tạo, khóa/mở khóa nhân viên theo đúng phân quyền backend.
-- `src/views/Inventory.jsx`: lọc mặt hàng theo tháng nhập kho; backend `/api/data` cần giữ trường `stockDate` trong document mặt hàng để bộ lọc hoạt động sau khi tải lại.
+- `src/views/Inventory.jsx`: ngày nhập kho được lưu trên backend khi API `/api/data` giữ trường `stockDate`; nếu backend chưa hỗ trợ, frontend lưu ngày dự phòng theo tài khoản trên trình duyệt hiện tại để không mất khi tải lại. Bản dự phòng không tự đồng bộ sang trình duyệt/thiết bị khác.
 - `src/App.jsx`: đăng nhập, thanh tiêu đề, tự lưu lên backend sau mỗi thay đổi.
 - `src/styles.css`: giao diện (tự đổi sáng/tối theo hệ thống).
